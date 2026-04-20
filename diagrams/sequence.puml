@@ -1,0 +1,25 @@
+@startuml
+actor Student as S
+participant "GUI" as UI
+participant "Backend API" as API
+participant "Vision Pipeline" as CV
+database "SQLite" as DB
+participant "WebSocket" as WS
+S -> UI : Start Session
+UI -> API : POST /sessions/start
+API -> DB : create session
+API -> WS : session_started
+loop every N frames
+ API -> CV : processFrame()
+ CV --> API : {score, state, flags}
+ API -> DB : insert event
+ API -> WS : focus_update
+ alt alert required
+ API -> WS : alert_triggered
+ end
+end
+S -> UI : Stop Session
+UI -> API : POST /sessions/{id}/stop
+API -> DB : save summary
+API -> WS : session_stopped
+@enduml

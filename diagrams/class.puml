@@ -1,0 +1,46 @@
+@startuml
+class Session {
+ sessionId
+ startTime
+ endTime
+ avgScore
+ focusedPercent
+ distractedPercent
+ awayPercent
+ + finalizeSession()
+}
+class Event {
+ eventId
+ timestamp
+ score
+ state
+ reasonFlags
+}
+class Settings {
+ gazeThresholdSec
+ phoneThresholdSec
+ postureThresholdSec
+ absenceThresholdSec
+ alertCooldownSec
+ frameSampleRate
+}
+class VisionPipeline {
+ + captureFrame()
+ + preprocessFrame()
+ + extractVisualSignals()
+}
+class FocusEngine {
+ + computeFocusScore()
+ + determineFocusState()
+ + updateCounters()
+}
+class AlertManager {
+ + checkAlertConditions()
+ + triggerAlert()
+}
+Session "1" --> "*" Event : contains
+Session --> Settings : uses
+FocusEngine --> VisionPipeline : processes
+FocusEngine --> AlertManager : notifies
+Session --> FocusEngine : controlled by
+@enduml

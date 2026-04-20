@@ -1,0 +1,14 @@
+@startuml
+component "GUI (Dashboard)" as UI
+component "Backend API" as API
+database "Local DB (SQLite)" as DB
+component "WebSocket" as RT
+component "Vision Pipeline" as CV
+component "Alert Manager" as AM
+UI --> API : REST/JSON
+UI --> RT : WebSocket events
+API --> CV : process frames / extract features
+API --> DB : read/write sessions & events
+API --> AM : evaluate thresholds + cooldown
+AM --> RT : alert_triggered
+@enduml

@@ -1,0 +1,25 @@
+@startuml
+start
+:Start Session;
+:Capture frame (sampled);
+:Preprocess frame;
+:Detect face + landmarks;
+if (Face present?) then (yes)
+ :Estimate gaze;
+ :Estimate pose/posture;
+ :Detect phone;
+ :Update counters;
+ :Compute score + state;
+else (no)
+ :Update absence counter;
+ :Set state = AWAY if threshold met;
+endif
+:Log event;
+if (Alert conditions met?) then (yes)
+ :Trigger gentle alert;
+endif
+repeat while (Session active?)
+:Stop Session;
+:Aggregate metrics + save summary;
+stop
+@enduml
