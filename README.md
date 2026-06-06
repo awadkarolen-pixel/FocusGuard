@@ -123,7 +123,7 @@ pip install fastapi uvicorn opencv-python mediapipe
 3. Start the server:
 
 ```
-python -m uvicorn app.main:app --reload
+py -m uvicorn app.main:app --reload
 ```
 
 4. Open the frontend file:
