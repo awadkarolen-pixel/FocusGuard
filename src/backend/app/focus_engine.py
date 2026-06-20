@@ -1,8 +1,13 @@
 import time
 
-AWAY_FACE_THRESHOLD = 3.0
+# The FaceDetector now owns the ~2.5s "is the face really gone" grace window
+# (see vision_face.FACE_GRACE_PERIOD), so this only needs to be a small bridge.
+# Keeping it large here would stack with the detector grace and make true
+# absence slow to detect (~5.5s); a short value keeps total absence ≈ 3s.
+AWAY_FACE_THRESHOLD = 0.5
 SIDE_GAZE_THRESHOLD = 4.0
 DOWN_GAZE_THRESHOLD = 7.0
+PHONE_THRESHOLD = 3.0
 
 DISTRACTED_GAZES = {"LEFT", "RIGHT", "DOWN"}
 
@@ -22,6 +27,11 @@ class FocusEngine:
 
         self.last_face_seen = self.session_start
         self.last_center_gaze = self.session_start
+
+        # Phone-distraction tracking: when the current continuous phone event
+        # started, and whether it has already raised its single alert.
+        self.phone_start = None
+        self.phone_alerted = False
 
         self.state = "FOCUSED"
         self.focused_time = 0.0
@@ -53,7 +63,15 @@ class FocusEngine:
             "alerts_count": self.alerts_count
         }
 
-    def update(self, face_detected: bool, gaze: str):
+    def end_session(self):
+        """Finalize the session early (manual stop) and return its summary."""
+        self.session_active = False
+        return {
+            "session_finished": True,
+            "summary": self.end_session_summary()
+        }
+
+    def update(self, face_detected: bool, gaze: str, phone_detected: bool = False):
         if not self.session_active:
             return None
 
@@ -112,6 +130,26 @@ class FocusEngine:
 
         if face_detected and (gaze == "CENTER" or (self.notes_mode and gaze == "DOWN")):
             self.state = "FOCUSED"
+
+        # Phone logic — evaluated last so it overrides focus restoration.
+        # A phone held continuously for longer than PHONE_THRESHOLD counts as a
+        # distraction, just like looking away. alerts_count is incremented only
+        # once per continuous phone event (latched by self.phone_alerted), and
+        # the latch resets when the phone leaves the frame so a later event can
+        # alert again.
+        if phone_detected:
+            if self.phone_start is None:
+                self.phone_start = now
+            if now - self.phone_start > PHONE_THRESHOLD:
+                if not self.phone_alerted:
+                    self.alerts_count += 1
+                    self.phone_alerted = True
+                self.state = "AWAY"
+                alert = True
+                alert_reason = "Phone detected — put it away to stay focused"
+        else:
+            self.phone_start = None
+            self.phone_alerted = False
 
         remaining_time = None
         if self.session_end_time:

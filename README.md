@@ -33,7 +33,6 @@ src/
     setup.bat               one-time backend setup for packaged builds
   frontend/
     focusguard-app/         React + Electron app (see its own README)
-    test_ws.html            legacy single-file prototype (superseded; kept for reference)
 docs/                       detailed design (PDF)
 diagrams/                   PlantUML diagrams (activity, class, component, sequence)
 ```
