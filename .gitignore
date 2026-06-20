@@ -20,4 +20,9 @@ Thumbs.db
 *.sqlite
 *.db
 logs/
+
+# YOLO model weights: ignore all except the one the app ships with
+# (yolo11s.pt is used for phone detection and is committed so the project
+# runs from a fresh clone without downloading it at startup).
 *.pt
+!src/backend/yolo11s.pt

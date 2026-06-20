@@ -1,133 +1,142 @@
 # FocusGuard — Webcam-Based Focus Monitoring
 
-## Prototype
-
-This repository contains a working prototype of FocusGuard, a system that helps students stay focused while studying using a webcam.
-
-The prototype demonstrates real-time focus detection, alerts, session summary, and history tracking.
-
----
-
-## Overview
-
-FocusGuard is a local system that monitors attention during study sessions.
-
-It detects situations such as:
-- looking away from the screen
-- not being present in front of the camera
-- staying distracted for a long time
-
-When this happens, the system gives a small alert to help the user refocus.
-
-All processing is done locally on the computer. No video is saved.
+FocusGuard is a local desktop application that helps students stay focused while
+studying. A webcam monitors attention during a study session and gives a small
+alert when it detects loss of focus (looking away, leaving the camera, or using
+a phone). All processing is done locally — no video is stored and no data leaves
+the computer.
 
 ---
 
-## Prototype Goal
+## Architecture
 
-The goal of this prototype is to show that it is possible to detect loss of focus in real time using a webcam, and react to it with simple alerts.
+```
+Electron desktop window  ──loads──>  React UI (Vite + TypeScript)
+        │                                   │
+        │ spawns + manages                  │ WebSocket  ws://127.0.0.1:8000/ws/focus
+        ▼                                   ▼
+FastAPI backend (Python)  ── OpenCV + MediaPipe (face / gaze) + YOLO11 (phone) ──> focus engine ──> SQLite
+```
 
-It is mainly meant to test the idea and see if this kind of system can actually help during study sessions.
+- **Frontend** — React + TypeScript (Vite), packaged as an Electron desktop app.
+- **Backend** — FastAPI server; vision via OpenCV, MediaPipe (face + gaze) and
+  YOLO11 / Ultralytics (phone detection); focus scoring in `focus_engine.py`.
+- **Database** — SQLite (`focusguard.db`), session summaries only.
+- Frontend ⇄ backend communicate over a WebSocket for real-time updates.
 
----
-
-## Features
-
-- Real-time focus state (Focused / Away)
-- Focus score based on user behavior
-- Audio alerts when distraction is detected
-- Session timer
-- Session summary after each session
-- Session history saved locally
-- Notes mode (reduces alerts while writing)
-
----
-
-## System Structure
-
-The system is divided into several parts:
-
-- Frontend – a simple dashboard for displaying the focus state
-- Backend – a FastAPI server that handles logic and communication
-- Vision module – detects face presence and basic gaze direction
-- Focus logic – decides whether the user is focused or distracted
-- Local database – stores session data
-
-The frontend and backend communicate using WebSocket for real-time updates.
+```
+src/
+  backend/                  FastAPI app + vision + focus engine
+    app/                    main.py, ws.py, focus_engine.py, vision_*.py, db.py
+    requirements.txt
+    yolo11s.pt              YOLO11 model used for phone detection
+    setup.bat               one-time backend setup for packaged builds
+  frontend/
+    focusguard-app/         React + Electron app (see its own README)
+    test_ws.html            legacy single-file prototype (superseded; kept for reference)
+docs/                       detailed design (PDF)
+diagrams/                   PlantUML diagrams (activity, class, component, sequence)
+```
 
 ---
 
-## Technologies
+## Prerequisites
 
-- Python (FastAPI)
-- OpenCV + MediaPipe
-- SQLite
-- HTML + JavaScript
-
----
-
-## Prototype Status
-
-What currently works:
-- Face detection
-- Detecting if the user is present or not
-- Basic focus estimation
-- Alerts after a period of distraction
-- Session tracking and summary
-
-Limitations and Future Improvements:
-- Gaze detection is not very accurate
-- The interface is basic (for demo purposes)
-- Works only on desktop
-- No user accounts or personalization
+- **Python 3.12** (MediaPipe wheels may not exist for newer versions). On
+  Windows, tick **"Add python.exe to PATH"** during install.
+- **Node.js 18+** (developed with Node 22) and npm.
+- A working **webcam**. On Windows, enable
+  **Settings → Privacy & security → Camera → "Let desktop apps access your
+  camera."** Close other apps that may hold the camera (Zoom, Teams, OBS).
 
 ---
 
-## Example Usage
+## Run it (development)
 
-1. The user starts a study session  
-2. The webcam is activated  
-3. The system shows the current focus state in real time  
-4. If the user is distracted for too long, an alert is triggered  
-5. At the end of the session, a summary is displayed  
+### 1. Backend (FastAPI)
+
+```bash
+cd src/backend
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+# source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+The YOLO11 model used for phone detection (`yolo11s.pt`) is **committed to the
+repository** at `src/backend/yolo11s.pt`, so the backend runs from a fresh clone
+without downloading anything at startup (no internet required for the model).
+
+### 2. Desktop app (Electron + React)
+
+```bash
+cd src/frontend/focusguard-app
+npm install
+npm run app
+```
+
+`npm run app` starts the Vite dev server **and** the Electron window, and
+Electron automatically launches the FastAPI backend from `src/backend/.venv`
+(so you do not need to start uvicorn yourself). It waits for the backend's
+`/health` endpoint, then loads the UI.
+
+> If `npm install` fails with a TLS certificate error behind a corporate proxy,
+> run it as `NODE_OPTIONS=--use-system-ca npm install`.
+
+### Run in a browser instead (no Electron)
+
+```bash
+# Terminal 1
+cd src/backend && python -m uvicorn app.main:app --reload
+# Terminal 2
+cd src/frontend/focusguard-app && npm run dev
+# then open http://localhost:5173/
+```
+
+---
+
+## How to use
+
+1. Open the app and pick a session length (30 min, 50 min, or a custom
+   Hours + Minutes), or set a Daily Goal first.
+2. The session starts; the live dashboard shows focus status, gaze direction,
+   time remaining, camera status, and alerts.
+3. Looking away, leaving the camera, or using a phone for a few seconds triggers
+   an alert (with an optional sound).
+4. End the session (or let the timer finish) to see the summary; the
+   **Statistics** and **History** tabs aggregate past sessions.
+
+---
+
+## Build a Windows installer
+
+```bash
+cd src/frontend/focusguard-app
+npm run dist
+```
+
+Produces `release/FocusGuard Setup <version>.exe`. The installer bundles the UI,
+the backend source, and the YOLO model, but **not** the heavy Python
+dependencies — after installing, run the bundled `resources/backend/setup.bat`
+once (it creates the venv and installs the libraries). See
+`src/frontend/focusguard-app/README.md` for full packaging and distribution
+notes.
 
 ---
 
 ## Privacy
 
-FocusGuard is designed to work locally:
-
-- No video is stored
-- No data is sent to external servers
-- Only simple session data (like focus states and timestamps) is saved
+- No video is recorded or stored.
+- No data is sent to external servers.
+- Only session summaries (focus state, times, alert counts, timestamps) are
+  saved locally in SQLite.
 
 ---
 
-## How to Run
+## Documentation
 
-To run the project locally:
-
-1. Go to the backend folder:
-
-
-```
-cd src/backend
-```
-
-2. Install the required libraries:
-
-```
-pip install fastapi uvicorn opencv-python mediapipe
-```
-
-3. Start the server:
-
-```
-py -m uvicorn app.main:app --reload
-```
-
-4. Open the frontend file:
-
-```
-src/frontend/test_ws.html
-```
+- `docs/FocusGuard-Detailed-Design.pdf` — detailed design document.
+- `diagrams/` — activity, class, component, and sequence diagrams (PlantUML).
+- `src/frontend/focusguard-app/README.md` — frontend dev, run, and packaging.
