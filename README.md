@@ -39,6 +39,30 @@ diagrams/                   PlantUML diagrams (activity, class, component, seque
 
 ---
 
+## Technologies Used
+
+### Backend
+
+* Python
+* FastAPI
+* OpenCV
+* MediaPipe
+* YOLO11 (Ultralytics)
+* SQLite
+
+### Frontend
+
+* React
+* TypeScript
+* Vite
+* Electron
+
+### Communication
+
+* WebSocket
+
+---
+
 ## Prerequisites
 
 - **Python 3.12** (MediaPipe wheels may not exist for newer versions). On
