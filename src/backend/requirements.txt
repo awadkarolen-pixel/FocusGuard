@@ -1,7 +1,8 @@
-fastapi
-uvicorn[standard]
-pydantic
-opencv-python
-numpy
-mediapipe
-ultralytics
+# Tested on Python 3.12. ultralytics installs torch/torchvision automatically.
+fastapi==0.128.0
+uvicorn[standard]==0.40.0
+pydantic==2.12.5
+opencv-python==4.13.0.90
+numpy==2.4.1
+mediapipe==0.10.14
+ultralytics==8.4.69
